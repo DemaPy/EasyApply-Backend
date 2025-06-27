@@ -1,0 +1,114 @@
+import {
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
+import { Response } from 'express';
+import { PrismaClientKnownRequestError } from 'generated/prisma/runtime/library';
+import { PrismaService } from 'src/prisma/prisma.service';
+
+interface SessionRequest extends Request {
+  cookies: {
+    sessionId: string;
+  };
+}
+
+@Controller('api')
+export class VotingController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Get('/features')
+  async getAll() {
+    try {
+      return await this.prisma.feature.findMany();
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException();
+    }
+  }
+
+  @Post('/features')
+  async create(
+    @Body() body: { title: string },
+    @Req() req: SessionRequest,
+    @Res() res: Response,
+  ) {
+    const sessionId = req.cookies['sessionId'];
+    if (!sessionId) {
+      throw new ConflictException('No valid donation session found');
+    }
+    const { title } = body;
+    if (!title) {
+      throw new BadRequestException('Title required to create feature');
+    }
+
+    const hasSubmittedFeature = await this.prisma.feature.findFirst({
+      where: {
+        sessionId,
+      },
+    });
+    if (hasSubmittedFeature) {
+      throw new BadRequestException('Feature has been already submitted');
+    }
+
+    try {
+      await this.prisma.feature.create({
+        data: {
+          title,
+          sessionId,
+        },
+      });
+      return res.json({ success: true });
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException('Something went wrong');
+    }
+  }
+
+  @Post('features/:id/like')
+  async likeFeature(
+    @Param('id') id: string,
+    @Req() req: SessionRequest,
+    @Res() res: Response,
+  ) {
+    const sessionId = req.cookies['sessionId'];
+    if (!sessionId) {
+      throw new ConflictException('No valid donation session found');
+    }
+    // TODO: if featureLike with session exist throw
+    try {
+      await this.prisma.featureLike.create({
+        data: {
+          featureId: id,
+          sessionId,
+        },
+      });
+
+      await this.prisma.feature.update({
+        where: { id },
+        data: {
+          upvotes: { increment: 1 },
+        },
+      });
+
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      console.log(error);
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2003') {
+          throw new BadRequestException('Feature does not exist');
+        }
+        if (error.code === 'P2002') {
+          throw new BadRequestException('You have already voted');
+        }
+      }
+      throw new ConflictException('You already liked this feature');
+    }
+  }
+}
