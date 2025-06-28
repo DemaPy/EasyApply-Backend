@@ -19,6 +19,8 @@ interface SessionRequest extends Request {
   };
 }
 
+const CHARS_LIMIT = 300;
+
 @Controller('api')
 export class VotingController {
   constructor(private readonly prisma: PrismaService) {}
@@ -26,7 +28,11 @@ export class VotingController {
   @Get('/features')
   async getAll() {
     try {
-      return await this.prisma.feature.findMany();
+      return await this.prisma.feature.findMany({
+        orderBy: {
+          upvotes: 'desc',
+        },
+      });
     } catch (error) {
       console.log(error);
       throw new BadRequestException();
@@ -44,8 +50,8 @@ export class VotingController {
       throw new ConflictException('No valid donation session found');
     }
     const { title } = body;
-    if (!title) {
-      throw new BadRequestException('Title required to create feature');
+    if (!title || title.length > CHARS_LIMIT) {
+      throw new BadRequestException('Valid title required to create feature');
     }
 
     const hasSubmittedFeature = await this.prisma.feature.findFirst({
