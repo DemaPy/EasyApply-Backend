@@ -41,18 +41,16 @@ export class DonationController {
       },
     });
 
-    if (isValid) {
-      res.cookie('sessionId', sessionId, {
-        maxAge: 1000 * 60 * 30, // 30 min
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
-      return res.json({
-        success: true,
-        canSubmitFeature: !hasSubmittedFeature,
-        canVote: !hasVoted,
-      });
-    }
+    res.cookie('sessionId', sessionId, {
+      maxAge: 1000 * 60 * 30, // 30 min
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+    });
+    return res.json({
+      success: true,
+      canSubmitFeature: !hasSubmittedFeature,
+      canVote: !hasVoted,
+    });
   }
 }
