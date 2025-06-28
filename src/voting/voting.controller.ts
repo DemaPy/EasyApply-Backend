@@ -29,6 +29,11 @@ export class VotingController {
   async getAll() {
     try {
       return await this.prisma.feature.findMany({
+        select: {
+          id: true,
+          title: true,
+          upvotes: true,
+        },
         orderBy: {
           upvotes: 'desc',
         },
@@ -87,7 +92,16 @@ export class VotingController {
     if (!sessionId) {
       throw new ConflictException('No valid donation session found');
     }
-    // TODO: if featureLike with session exist throw
+
+    const alreadyLikedFeature = await this.prisma.feature.findUnique({
+      where: {
+        sessionId,
+      },
+    });
+    if (alreadyLikedFeature) {
+      throw new BadRequestException('You cannot upvote Your feature twice');
+    }
+
     try {
       await this.prisma.featureLike.create({
         data: {
