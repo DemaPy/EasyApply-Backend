@@ -26,6 +26,7 @@ export class VotingController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('/features')
+  // TODO: move get all features to Feature module
   async getAll() {
     try {
       return await this.prisma.feature.findMany({
@@ -44,6 +45,7 @@ export class VotingController {
     }
   }
 
+  // TODO: move feature create to Feature module
   @Post('/features')
   async create(
     @Body() body: { title: string },
