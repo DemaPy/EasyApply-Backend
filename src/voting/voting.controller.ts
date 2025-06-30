@@ -100,8 +100,9 @@ export class VotingController {
         sessionId,
       },
     });
-    if (alreadyLikedFeature) {
-      throw new BadRequestException('You cannot upvote Your feature twice');
+
+    if (alreadyLikedFeature?.id === id) {
+      throw new BadRequestException('You cannot upvote twice');
     }
 
     try {
