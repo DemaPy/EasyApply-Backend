@@ -5,6 +5,9 @@ import {
   Res,
   HttpException,
   HttpStatus,
+  Post,
+  Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -16,6 +19,29 @@ export class DonationController {
     private readonly stripeService: StripeService,
     private readonly prisma: PrismaService,
   ) {}
+
+  @Post('custom-amount')
+  async customAmountStripeSession(
+    @Body() body: { amount: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const { amount } = body;
+
+      if (!amount) {
+        throw new BadRequestException('Amount required.');
+      }
+      const session =
+        await this.stripeService.checkoutSessionWithCustomAmount(amount);
+
+      return res.json({
+        redirect_url: session.url,
+      });
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException();
+    }
+  }
 
   @Get('verify-payment')
   async verifyPayment(
